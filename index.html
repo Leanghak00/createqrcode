@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>QR Code Generator & URL Shortener (Responsive)</title>
+  <style>
+    :root{
+      --bg1: #0f2027;
+      --bg2: #2c5364;
+      --card-bg: rgba(255,255,255,0.98);
+      --accent: #28a745;
+      --muted: #6b7280;
+      --glass: rgba(255,255,255,0.06);
+    }
+
+    *{box-sizing:border-box;font-family: "Noto Sans Khmer", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+
+    body{
+      margin:0;
+      min-height:100vh;
+      background: linear-gradient(135deg,var(--bg1),var(--bg2));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:30px;
+      color:#0b1220;
+      overflow:hidden;
+    }
+
+    .wrap{
+      width:100%;
+      max-width:1100px;
+      display:flex;
+      gap:24px;
+      align-items:flex-start;
+      justify-content:center;
+      padding:28px;
+    }
+
+    /* CARD */
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.95), var(--card-bg));
+      border-radius:16px;
+      box-shadow: 0 8px 30px rgba(2,6,23,0.6);
+      padding:22px;
+      flex:1 1 480px;
+      backdrop-filter: blur(6px);
+    }
+
+    h1{
+      margin:0 0 8px 0;
+      font-size:20px;
+      color:#0b1220;
+    }
+    p.lead{ margin:0 0 16px 0; color:var(--muted); font-size:14px; }
+
+    .form-row{ display:flex; gap:12px; margin-bottom:12px; align-items:center; }
+    .form-row.full { flex-direction:column; align-items:stretch; gap:10px; }
+
+    input[type="text"], input[type="url"]{
+      padding:12px 14px;
+      font-size:15px;
+      border-radius:10px;
+      border:1px solid #e6e8ea;
+      outline:none;
+      width:100%;
+      background:white;
+      transition: box-shadow .15s, transform .12s;
+    }
+    input[type="text"]:focus, input[type="url"]:focus{ box-shadow:0 6px 18px rgba(15,20,32,0.06); transform:translateY(-1px); }
+
+    .btn{
+      padding:11px 16px;
+      border-radius:10px;
+      border:none;
+      cursor:pointer;
+      background:linear-gradient(90deg,var(--accent), #2bb673);
+      color:white;
+      font-weight:600;
+      font-size:15px;
+      box-shadow:0 6px 18px rgba(40,167,69,0.18);
+    }
+    .btn.ghost{
+      background:transparent;
+      color:var(--muted);
+      border:1px solid rgba(11,18,32,0.06);
+      box-shadow:none;
+    }
+
+    #qrcode {
+      margin-top:12px;
+      padding:14px;
+      border-radius:12px;
+      background:linear-gradient(180deg, #fff, #fbfdff);
+      display:inline-block;
+    }
+
+    .actions{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+    .small { padding:8px 10px; font-size:13px; border-radius:8px; }
+
+    /* SHORTENER CARD */
+    .card.secondary{
+      flex:0 0 360px;
+      max-width:360px;
+      align-self:flex-start;
+      position:relative;
+    }
+    .short-output{
+      margin-top:10px;
+      padding:10px;
+      border-radius:10px;
+      background: #f7f9fb;
+      border:1px solid #eef2f6;
+      font-size:14px;
+      word-break:break-all;
+    }
+
+    /* Floating icons container */
+    .float-layer{ position:fixed; inset:0; pointer-events:none; z-index:5; }
+
+    .logo {
+      position:absolute;
+      width:56px;
+      height:56px;
+      border-radius:12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow:0 6px 18px rgba(2,6,23,0.35);
+      opacity:0.95;
+      transform: translate3d(0,0,0);
+    }
+    .logo img{ width:70%; height:70%; object-fit:contain; }
+
+    /* Responsive */
+    @media (max-width:900px){
+      .wrap{ padding:18px; gap:16px; flex-direction:column-reverse; align-items:stretch; }
+      .card.secondary{ max-width:100%; flex:1 1 auto; align-self:stretch; }
+      .card{ flex:1 1 auto; }
+      .logo{ width:44px; height:44px; border-radius:10px; opacity:0.9; }
+    }
+    @media (max-width:420px){
+      body{ padding:16px; }
+      h1{ font-size:18px; }
+      .logo{ width:36px; height:36px; }
+      input{ font-size:15px; }
+      .btn{ padding:10px 12px; font-size:14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="float-layer" id="floatLayer"></div>
+
+  <div class="wrap">
+    <!-- LEFT: MAIN QR AREA -->
+    <div class="card">
+      <h1>បង្កើត QR Code</h1>
+      <p class="lead">ចូលអត្ថបទ ឬ URL រួចចុច "បង្កើត" — អាចទាញយករូប QR ហើយប្រើបានភ្លាមៗ។</p>
+
+      <div class="form-row full">
+        <input id="text" type="text" placeholder="បញ្ចូលអត្ថបទ ឬ URL..." />
+        <div class="actions">
+          <button class="btn" id="genBtn">បង្កើត QR Code</button>
+          <button class="btn ghost small" id="clearBtn">សម្អាត</button>
+        </div>
+      </div>
+
+      <div id="qrcode" aria-live="polite"></div>
+
+      <div class="actions" style="margin-top:10px;">
+        <button class="btn small" id="downloadBtn">ទាញយក QR (PNG)</button>
+        <button class="btn ghost small" id="copyImgBtn">ចម្លង Image URL (បើមាន)</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: URL SHORTENER -->
+    <div class="card secondary">
+      <h1>កាត់ URL វែង → ខ្លី</h1>
+      <p class="lead">បញ្ចូល URL វែងដែលចង់កាត់</p>
+
+      <div class="form-row full">
+        <input id="longUrl" type="url" placeholder="https://example.com/..." />
+        <div class="actions">
+          <button class="btn" id="shortenBtn">កាត់ URL</button>
+          <button class="btn ghost small" id="copyShortBtn">ចម្លង</button>
+        </div>
+      </div>
+
+      <div id="shortOutput" class="short-output">URL ខ្លី​នឹងបង្ហាញទីនេះ...</div>
+    </div>
+  </div>
+
+  <!-- QRCode library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    // ---------------------
+    // Floating logos (random) — Facebook and YouTube
+    // ---------------------
+    const logos = [
+      'https://upload.wikimedia.org/wikipedia/commons/4/44/Facebook_Logo.png',
+      'https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_Logo_2017.svg'
+    ];
+    const floatLayer = document.getElementById('floatLayer');
+
+    function createFloatingLogos(count = 8) {
+      // clear
+      floatLayer.innerHTML = '';
+      for (let i=0;i<count;i++){
+        const div = document.createElement('div');
+        div.className = 'logo';
+        const img = document.createElement('img');
+        img.src = logos[i % logos.length];
+        div.appendChild(img);
+
+        // random start position (percent)
+        const sx = Math.random() * 100;
+        const sy = Math.random() * 100;
+        div.style.left = sx + 'vw';
+        div.style.top = sy + 'vh';
+
+        // random animation parameters via JS
+        const dur = 8 + Math.random()*10; // 8-18s
+        const delay = Math.random()*-10;
+        const scale = 0.7 + Math.random()*0.8;
+        div.style.transition = `transform ${dur}s linear ${delay}s, left ${dur}s linear ${delay}s, top ${dur}s linear ${delay}s`;
+        floatLayer.appendChild(div);
+
+        // animate movement loop
+        (function loop(el){
+          const nx = Math.random() * 100;
+          const ny = Math.random() * 100;
+          const rot = (Math.random()*30) - 15;
+          el.style.left = nx + 'vw';
+          el.style.top = ny + 'vh';
+          el.style.transform = `rotate(${rot}deg) scale(${scale})`;
+          setTimeout(()=> loop(el), (dur*1000));
+        })(div);
+      }
+    }
+    // reduce logos on small screens
+    const logoCount = window.innerWidth < 700 ? 5 : 10;
+    createFloatingLogos(logoCount);
+
+    // ---------------------
+    // QR Code generate / download
+    // ---------------------
+    let qrcode = null;
+    const qrContainer = document.getElementById('qrcode');
+    const genBtn = document.getElementById('genBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const copyImgBtn = document.getElementById('copyImgBtn');
+
+    function createQR(text){
+      qrContainer.innerHTML = '';
+      qrcode = new QRCode(qrContainer, {
+        text: text,
+        width: 240,
+        height: 240,
+        colorDark: "#0b1220",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    genBtn.addEventListener('click', ()=>{
+      const txt = document.getElementById('text').value.trim();
+      if(!txt){
+        alert('សូមវាយអត្ថបទ ឬ URL មុនពេលបង្កើត។');
+        return;
+      }
+      createQR(txt);
+    });
+
+    clearBtn.addEventListener('click', ()=>{
+      document.getElementById('text').value = '';
+      qrContainer.innerHTML = '';
+    });
+
+    // Download QR as PNG
+    downloadBtn.addEventListener('click', ()=>{
+      if(!qrContainer.querySelector('img') && !qrContainer.querySelector('canvas')){
+        alert('មិនមាន QR នោះទេ — សូមបង្កើតមុន។');
+        return;
+      }
+      // qrcodejs outputs an img inside the container (or table). Try to find an img or canvas.
+      const img = qrContainer.querySelector('img');
+      if(img && img.src){
+        // create a link and download
+        const a = document.createElement('a');
+        a.href = img.src;
+        a.download = 'qr-code.png';
+        a.click();
+      } else {
+        // fallback: draw canvas from table by serializing (rare)
+        alert('មិនអាចទាញយកពេលនេះ — សូម Refresh និងព្យាយាមម្តងទៀត។');
+      }
+    });
+
+    // copy image src (if img)
+    copyImgBtn.addEventListener('click', async ()=>{
+      const img = qrContainer.querySelector('img');
+      if(!img || !img.src) { alert('មិនមានរូបភាព QR — សូមបង្កើត។'); return; }
+      try{
+        await navigator.clipboard.writeText(img.src);
+        alert('បានចម្លង URL រូបភាពទៅ Clipboard');
+      }catch(e){
+        alert('បានបរាជ័យក្នុងការចម្លង (browser restriction).');
+      }
+    });
+
+    // ---------------------
+    // URL Shortener (TinyURL)
+    // ---------------------
+    const shortenBtn = document.getElementById('shortenBtn');
+    const longUrlInput = document.getElementById('longUrl');
+    const shortOutput = document.getElementById('shortOutput');
+    const copyShortBtn = document.getElementById('copyShortBtn');
+
+    shortenBtn.addEventListener('click', async ()=>{
+      const longUrl = longUrlInput.value.trim();
+      if(!longUrl){ alert('សូមវាយ URL មុន។'); return; }
+      shortOutput.textContent = 'កំពុងដំណើរការ...';
+      try{
+        // TinyURL simple API
+        const res = await fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(longUrl));
+        const short = await res.text();
+        shortOutput.innerHTML = `<a href="${short}" target="_blank" rel="noopener">${short}</a>`;
+      } catch(err){
+        shortOutput.textContent = 'មានបញ្ហា — សូមពិនិត្យការតភ្ជាប់អ៊ីនធឺណែត';
+      }
+    });
+
+    copyShortBtn.addEventListener('click', async ()=>{
+      const link = shortOutput.querySelector('a');
+      if(!link){ alert('មិនមាន URL ខ្លី — សូមកាត់ URL មុន។'); return; }
+      try{
+        await navigator.clipboard.writeText(link.href);
+        alert('បានចម្លង URL ខ្លីទៅ Clipboard');
+      }catch(e){
+        alert('បរាជ័យក្នុងការចម្លង (browser restriction).');
+      }
+    });
+
+    // Optional: generate a sample QR on load (comment out if undesired)
+    // createQR('https://example.com');
+
+    // Resize handling: recreate logos if orientation/size changes notably
+    let resizeTimeout;
+    window.addEventListener('resize', ()=>{
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(()=> createFloatingLogos(window.innerWidth < 700 ? 5 : 10), 300);
+    });
+  </script>
+</body>
+</html>
